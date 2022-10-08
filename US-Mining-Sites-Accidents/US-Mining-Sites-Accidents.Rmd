@@ -1,0 +1,553 @@
+---
+title: "US-Mining-Sites-Accidents"
+author: "Yaameen Choudhury"
+date: "2022-08-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+The dataset provided is US ACCIDENT INJURY that shows data regarding the accidents that takes place in US mine sites.
+
+
+### Setting working directory for the required dataset.
+```{r, warning=FALSE}
+setwd("~/Documents/CDA")
+
+```
+
+
+### Libraries
+
+```{r, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(tidyr)
+library(flextable)
+library(timetk)
+library(zoo)
+library(dplyr)
+library(gganimate)
+library(plotly)
+library(tidyverse)
+library(reshape2)
+library(gifski)
+
+
+```
+
+
+### Data load and Data Descriptions
+
+Loading the main dataset.
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+usdat<-read.csv("US Accident Data.csv")
+
+```
+
+Using str to analyze the data, we find:
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+str(usdat)
+```
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+table(sapply(usdat, class))
+```
+
+
+Here, we can see all the variable types in this dataset. There are total 57 attributes in this dataset and 2000 observations of them,comprised by 39 character, 13 integer and 5 numeric variables.
+From the integer and numeric variables, MINE_ID, DOC_NO, CLOSED_DOCUMENT_NO, SUBUNIT_CD are actually ids so they could be treated as factors or ignored for now. And, here some the character variables should be transformed in factor variables.
+
+
+
+Now, we can see the first 6 rows of this data set for better understanding.
+
+
+```{r fig.align='center', fig.width=7, fig.height=6}
+head(usdat)
+```
+### Summary of the dataset
+
+
+Here, first we have to do some type conversion.
+We did some numeric variables into character format because they are actually ids. 
+
+```{r}
+usdat$DOCUMENT_NO<- as.character(usdat$DOCUMENT_NO)
+usdat$CLOSED_DOC_NO<- as.character(usdat$CLOSED_DOC_NO)
+usdat$MINE_ID<-as.character(usdat$MINE_ID)
+```
+
+Now, we can find the summary measures for all the numerical columns.
+
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+
+numeric <- usdat %>% 
+  select(TOT_EXPER, JOB_EXPER, MINE_EXPER) %>%
+  tidyr::gather(key = "Variable", value = "value") %>%
+  group_by(Variable) %>% 
+  summarise(Frequency= n(),
+            Mean= round(mean(value, na.rm=T), 2),
+            Median = round(median(value,na.rm = T),2),
+            Sd = round(sd(value, na.rm = TRUE),2))
+
+
+flextable(numeric)
+
+
+```
+Above table shows that the summary statistics for the important numerical variables. 
+
+
+For  summary, measures of categorical variables we have to convert them in factors.
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+usdat <- usdat %>% mutate_if(is.character,as.factor)
+table(sapply(usdat, class))
+```
+
+Now. we can see that there are 42 facors and 12 integer and 3 numeric variables.
+
+We can choose each factor variable and find its categories quantity and percentages values.
+
+```{r fig.align='center', fig.width=7, fig.height=6}
+sbunit<-usdat%>%group_by(SUBUNIT) %>%
+ summarise(count = n()) %>%
+  mutate(p = round(count / sum(count, na.rm = TRUE), 2)*100)
+flextable(sbunit)
+```
+Here, we find the summaries for SUBUNIT, referring to the location within a mine where the accident/injury/illness occurred.
+
+
+
+
+```{r fig.align='center', fig.width=7, fig.height=6}
+usdat%>% group_by(FIPS_STATE_CD)%>%filter(FIPS_STATE_CD != "NO VALUE FOUND")%>%summarise(count = n())%>%
+  arrange(count)%>% 
+  ggplot(aes(reorder(FIPS_STATE_CD,count),count)) +geom_bar(stat = "identity", fill ="#3C565B")+coord_flip()+
+   ggtitle("Number of Total Accidents by State") +
+    geom_text(aes(label = count), vjust = 0.6, hjust = -.01)+
+  theme_bw() +
+   xlab("State Code")+
+   ylab("Total Number of Accidents")
+```
+
+From the chart, it can be seen that state code 21,17 and 18 have the highest number of injuries.
+
+```{r fig.align='center', fig.width=7, fig.height=6}
+days<-(factor(weekdays(as.Date(usdat$ACCIDENT_DT))))
+
+#Plot of the bar graph
+plot(ggplot(usdat) +
+  geom_bar(aes(x=days), fill ="#151B54") +
+  theme(text = element_text(size= 10)) +
+    labs(title = "Accidents count based on days")) 
+```
+
+The bar chart shows an equal distribution of accidents through out the week.
+
+
+
+```{r fig.align='center', fig.width=7, fig.height=6}
+usdat%>% group_by(FISCAL_YR)%>%filter(FISCAL_YR != "NO VALUE FOUND")%>%summarise(count = n())%>%
+  arrange(count)%>% 
+  ggplot(aes(reorder(FISCAL_YR,count),count)) +geom_bar(stat = "identity")+coord_flip()+
+   ggtitle("Number of Total Accidents by Fiscal Year") +
+    geom_text(aes(label = count), vjust = 0.6, hjust = -.01)+
+  theme_bw() +
+   xlab("Fiscal Year")+
+   ylab("Total Number of Accidents")
+
+```
+
+It can be seen from the bar chart that 2002 Fiscal Year had the highest number of injuries. It can also be seen that 2015 had the least which maybe because of introduction of new technologies and automation that helped reduced injuries.
+
+```{r fig.align='center', fig.width=7, fig.height=6}
+cmi<-usdat%>%group_by(COAL_METAL_IND) %>%filter(COAL_METAL_IND != "NO VALUE FOUND")%>%
+ summarise(count = n()) %>%
+  mutate(p = round(count / sum(count, na.rm = TRUE), 2)*100)
+flextable(cmi)
+```
+
+
+Here, we find the summaries for COAL_METAL_IND.Identifies if the accident occurred at a Coal or Metal/Non-Metal mine.It can be seen that around 1219 workers got injured in Metal/Non-Metal mine and around 781 got injured in Coal mine.
+
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+usdat%>%group_by(CLASSIFICATION)%>%
+                         summarise(total_accident = n()) %>%
+  arrange(total_accident)%>% top_n(10)%>% 
+  filter(CLASSIFICATION!="OTHER") %>% 
+  mutate(name=factor(CLASSIFICATION, levels=CLASSIFICATION)) %>%  
+  ggplot( aes(x=name, y=total_accident)) +
+  ggtitle("Top 10 Classifications by Total Accident")+
+    geom_segment( aes(xend=name, yend=0)) +
+    geom_point( size=4, color="orange") +
+    coord_flip() +
+    theme_bw() +
+    xlab("Classifications") +
+    ylab("Total Number of Accidents")
+```
+
+Here I have summarized the total number of accidents grouping by classifications. There were total 28 classifications that identifies the circumstances which contributed most directly to the resulting accidents. Then I have cleaned the variable by filtering out the _OTHER_ from classification. Then we plot the top 10 classifications based on count. From the chart it is evident that handling of materials has the highest number of accidents which is more than 500 when compared to stepping or kneeling on an object which is less than 50.
+
+
+```{r fig.align='center', fig.width=7, fig.height=6}
+
+usdat%>%group_by(SUBUNIT)%>%
+                         summarise(count = n()) %>% 
+  arrange(count)%>% top_n(5) %>%
+  mutate(x = 3) %>% 
+  ggplot(aes(x = 3, y = count, fill = SUBUNIT)) +
+  ggtitle("Number of Total Accidents by Top 5 SUB-UNIT")+
+  geom_col(color = "orange") +
+  geom_text(aes(label = count),
+             position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y") +
+  scale_fill_brewer(palette = "Spectral") +
+  xlim(c(0.2, 3 + 0.5)) +
+  theme(panel.background = element_rect(fill = "white"),
+        panel.grid = element_blank(),
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank())
+```
+
+The data is visualised based on SUBUNIT,referring to the location within a mine where the accident/injury/illness occurred. Here are total 9 SUBUNIT from which I have taken top 5 based on number of count. Among those underground was the location  where the maximum accident/injury/illness occurred. In contrast, Dredge has the least number of accidents.
+
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+usdat%>%group_by(INJ_BODY_PART)%>%
+                         summarise(total_accident = n()) %>%
+  arrange(total_accident)%>% top_n(2)%>% 
+  filter(INJ_BODY_PART!="OTHER") %>% 
+  mutate(name=factor(INJ_BODY_PART, levels=INJ_BODY_PART)) %>%  
+  ggplot( aes(x=name, y=total_accident)) +
+  ggtitle("Top 10 Classifications by Total Accident")+
+    geom_segment( aes(xend=name, yend=0)) +
+    geom_point( size=4, color="orange") +
+    coord_flip() +
+    theme_bw() +
+    xlab("Body Part") +
+    ylab("Total Number of Accidents")
+```
+The plot shows which body part has suffered the most injuries. From the chart, it can be seen that most of the injuries happened in finger/thumb followed by back injuries.
+
+
+
+```{r fig.align='center', fig.width=7, fig.height=6}
+usdat%>% group_by(CAL_YR)%>%summarise(count=n()) %>%
+  ggplot( aes(x=CAL_YR, y=count)) +
+    geom_line( color="grey") +
+    geom_point(shape=21, color="black", fill="#69b3a2", size=6) +
+    ggtitle("Number of Accidents by Time( Cal_Yr)")+theme_bw() +
+   xlab("Calender Years")+
+   ylab("Total Number of Accidents")
+```
+The chart above shows the yearly total number of accidents. To create this chart the data is summarized for each years using number of counts. From the chart, we can see that the number of accidents are showing decreasing trend over the years.
+
+
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+usdat%>% group_by(UG_LOCATION)%>%filter(UG_LOCATION != "NO VALUE FOUND")%>%summarise(count = n())%>%
+  arrange(count)%>%top_n(5)%>% 
+  ggplot(aes(reorder(UG_LOCATION,count),count)) +geom_bar(stat = "identity", color = "black", fill = "#4863A0")+coord_flip()+
+   ggtitle("Number of Total Accidents by top 5 Underground Location") +
+    geom_text(aes(label = count), vjust = 0.6, hjust = -.01)+
+  theme_bw() +
+   xlab("Underground Locations")+
+   ylab("Total Number of Accidents")
+  
+```
+The charts shows top 5 underground location where maximum accident occurs. First, we filter out the "NO VALUE FOUND" category from underground locations. At the underground location, FACE has the maximum number of accidents with 207 counts.
+
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+usdat%>%group_by(MINING_EQUIP)%>%filter(MINING_EQUIP != "NO VALUE FOUND")%>%summarise(ct = n())%>%top_n(5)%>% 
+  ggplot(aes(reorder(MINING_EQUIP,ct),ct)) +geom_bar(stat = "identity", fill = "#3CB371")+coord_flip()+
+   ggtitle("Number of Total Accidents by Top 5 Mining 
+           Equipments") +
+  geom_text(aes(label = ct),hjust=1.2, colour="white", size=3.5)+theme_bw()+
+  xlab("Mining Equipment")+
+  ylab("Total Number of  Accidents")
+```
+
+Here, we can see the total number of accidents based on most used mining equipment. First, we filter out the "NO VALUE FOUND". From the bar chart, it is evident that using mining equipment hand tools caused maximum number of accidents with the number being 235 which is very high when compared to others.
+
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+usdat%>%group_by(UG_MINING_METHOD)%>%filter(UG_MINING_METHOD != "NO VALUE FOUND")%>%summarise(ct = n())%>%top_n(5)%>% 
+  ggplot(aes(reorder(UG_MINING_METHOD,ct),ct)) +geom_bar(stat = "identity",fill = "#E67451")+
+  ggtitle("Number of Total Accidents by Top 5 Mining Methods") +
+  geom_text(aes(label = ct),vjust=-0.21, size=3.5)+ theme_bw()+
+  xlab("Mining Methods")+
+  ylab("Total number of Accidents")
+```
+
+The above chart shows the total number of accidents based on most used mining methods.First, we filter out the "NO VALUE FOUND".From the chart, it can be inferred that continuous mining has resulted in a very high number of accidents with the number being 434 which is six times higher than longwall which comes second.
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+usdat%>%group_by(EQUIP_MFR_NAME)%>%filter(EQUIP_MFR_NAME != "NO VALUE FOUND" & EQUIP_MFR_NAME !="Not Reported" & EQUIP_MFR_NAME !="Not listed" & EQUIP_MFR_NAME !="Not on this list")%>%summarise(ct = n())%>%top_n(5)%>% 
+  ggplot(aes(reorder(EQUIP_MFR_NAME,ct),ct)) +geom_bar(stat = "identity", fill ="#4E5180")+
+   ggtitle("Number of Total Accidentss by Top 5 Mining Machine Manufacturer") +
+    geom_text(aes(label = ct),vjust=-0.21, size=3.5)+ theme_bw()+
+  xlab("Mining Machine Manufacturer Name")+
+  ylab("Total Number of Accidents")
+```
+
+The chart lists the manufacturer name which cause the accidents most. First, we filter out the no value found, Not Reported, Not listed, and Not on this list. While using mining machine of manufacturer Caterpillar maximum number of 114 accidents occurred which is again significantly higher than other manufacturers.
+
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+usdat%>%group_by(ACTIVITY)%>%filter(ACTIVITY != "NO VALUE FOUND")%>%summarise(ct=n())%>%top_n(5)%>% 
+  ggplot(aes(reorder(ACTIVITY,ct),ct)) +
+   ggtitle("Number of Total Accidents by Most Common 5 Mining Activity") +
+  geom_bar(stat = "identity", fill = "#FDEEF4")+theme_bw()+
+    geom_text(aes(label = ct),color ="black",position=position_stack(vjust=0.5))+coord_flip()+
+  xlab("Mining activity")+
+  ylab("Total number of  accidents")
+
+```
+
+Here are the most common specific activity the accident victim was performing at the time of the incident. First, we filter out the no value found. It can be seen that while handling supplies and materials maximum number of 313 accidents happened.
+
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+usdat%>%group_by(INJURY_SOURCE)%>%filter(INJURY_SOURCE != "NO VALUE FOUND")%>%summarise(ct=n())%>%top_n(5)%>% ggplot(aes(reorder(INJURY_SOURCE,ct),ct)) +geom_bar(stat = "identity", fill = "#151B54")+ coord_flip()+
+  ggtitle("Number of Total Accidents by Most Common 5 Sources of Injury") +
+  geom_text(aes(label = ct),color ="white",position=position_stack(vjust=0.5))+theme_bw()+
+  xlab("Injury Source")+
+  ylab("Total Number of Accidents")
+```
+
+The most common injury source that were reason for accident can be seen from the above chart. First, we filter out the no value found. From the chart, it can be seen that the METAL, NEC is responsible for maximum number of injuries with 255.
+
+
+### Bivariate plots
+
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+usdat%>%group_by(NATURE_INJURY)%>%summarise(count=sum(NO_INJURIES))%>%arrange(desc(count))%>%top_n(5)%>%
+  ggplot(aes(reorder(NATURE_INJURY,count),count)) +geom_bar(stat = "identity", fill="#3EA055")+
+   ggtitle("Number of Total Injuries by Most Common Nature Injury") +
+    geom_text(aes(label = count),color ="white",position=position_stack(vjust=0.5))+ coord_flip()+ theme_bw()+
+  xlab("Nature Injury")+
+  ylab("Total number of Injuries")
+```
+
+
+The plot shows the total number of injuries by common nature of injury. From the chart, it can be seen that sprain, strain, ruptured disc are most common injuries.
+
+
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+usdat%>%group_by(ACTIVITY)%>%summarise(dayslost = sum(DAYS_LOST))%>%top_n(5)%>%
+  ggplot(aes(reorder(ACTIVITY,dayslost),dayslost)) +geom_bar(stat = "identity")+ coord_flip()+theme_bw()+
+  ggtitle("Number of Total Lost Days due to Injured by most Common Activity") +
+  geom_text(aes(label = dayslost),color ="white",position=position_stack(vjust=0.5))+
+  xlab("Activity")+
+  ylab("Total Days Lost due to Injury")
+```
+
+
+The above chart shows that a person who got injured by Operating Bulldozer seems to have lost a total of 410 days due to injury.
+
+
+```{r fig.align='center', fig.width=10, fig.height=6}
+usdat%>%group_by(ACCIDENT_TYPE)%>%
+                         summarise(total_injuries = sum(NO_INJURIES))%>% top_n(5)%>% 
+  ggplot(aes(reorder(ACCIDENT_TYPE,total_injuries),total_injuries)) +geom_bar(stat = "identity", fill="#29465B")+coord_flip()+theme_bw()+
+  ggtitle("Number of Total Injuries by Most Commmon 5 Accident Types")+
+  geom_text(aes(label = total_injuries),color ="white",position=position_stack(vjust=0.5))+
+  xlab("Accident Types")+
+  ylab("Total Number of Injuries")
+```
+The aboce chart show  total number of injuries by top 5 accident types. The Struck by, NEC accident type is responsible for 264 injuries.
+
+
+
+```{r fig.align='center', fig.width=12, fig.height=6}
+usdat%>%group_by(SUBUNIT,NATURE_INJURY)%>%summarise(ct=n(), .groups = 'drop')%>%
+  ggplot(aes(NATURE_INJURY,SUBUNIT, fill= ct)) + 
+  geom_tile() +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
+
+```
+
+Before creating this visualisation, a cross tabulation is calculated using those two categorical variables based on their counts.
+Next, the created hitmap displays the frequencies of the cross tabulation between two variables sub-unit and nature injury. 
+
+```{r fig.align='center', fig.width=12, fig.height=6}
+usdat%>%group_by(ACCIDENT_TYPE,NATURE_INJURY)%>%summarise(ct=n(), .groups = 'drop')%>%
+  ggplot(aes(ACCIDENT_TYPE, NATURE_INJURY, fill= ct)) + 
+  geom_tile() +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
+
+```
+
+Before creating this visualisation, a cross tabulation is calculated using those two categorical variables based on their counts.
+Next, the created hitmap displays the frequencies of the cross tabulation between two variables Accident type and nature injury.
+
+
+
+
+```{r fig.align='center', fig.width=12, fig.height=6}
+usdat%>%group_by( DEGREE_INJURY, NATURE_INJURY)%>%summarise(ct=n(), .groups = 'drop')%>%
+  ggplot(aes( DEGREE_INJURY, NATURE_INJURY, fill= ct)) + 
+  geom_tile() +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
+
+```
+
+Before creating this visualisation, a cross tabulation is calculated using those two categorical variables based on their counts.
+Next, the created hitmap displays the frequencies of the cross tabulation between two variables degree of injury and nature of injury.
+
+
+```{r fig.align='center', fig.width=12, fig.height=6}
+usdat%>%group_by(SUBUNIT, DEGREE_INJURY)%>%summarise(ct=n(), .groups = 'drop')%>%
+  ggplot(aes(SUBUNIT, DEGREE_INJURY, fill= ct)) + 
+  geom_tile() +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
+
+```
+
+Before creating this visualisation, a cross tabulation is calculated using those two categorical variables based on their counts.
+Next, the created hitmap displays the frequencies of the cross tabulation between two variables subunit and degree of injury.
+
+
+
+
+```{r, warning=FALSE, message=FALSE}
+
+usdat$cal_year <- as.Date(as.character(usdat$CAL_YR),format = "%Y")
+
+
+d <- usdat %>%
+  group_by(cal_year) %>% 
+  summarise(job_experience=sum(JOB_EXPER, na.rm = T),
+            total_experience=sum(TOT_EXPER, na.rm = T)) 
+
+df <- melt(d, id.vars = "cal_year")
+
+df <- transform(df, date=zoo::as.Date(cal_year,frac=0))
+df <- as_tibble(df)
+
+p <- df %>% 
+  ggplot(aes(x=date,y=value, color=variable))+geom_line(size=2)+geom_point()+transition_reveal(date)+theme(legend.position = "none")
+
+animate(p, renderer = gifski_renderer())
+
+
+```
+
+The multiple line chart describes the total changes of job experienced and total experienced people in every year from the starting. The graphs also visualize that the line chart is decreasing over a period of time. 
+
+
+
+```{r, warning=FALSE, message=FALSE}
+
+
+c <- usdat%>%group_by(ACCIDENT_TYPE,cal_year)%>% slice(1:10)%>%
+                         summarise(total_injuries = sum(NO_INJURIES))%>% slice(1:10)
+
+
+
+c <- transform(c, date=zoo::as.Date(cal_year,frac=0))
+
+d <- c%>% 
+  ggplot(aes(x=cal_year, y=total_injuries, fill=ACCIDENT_TYPE,
+                          text=ACCIDENT_TYPE))+ geom_area()+ transition_reveal(date)+theme(legend.position = "none")+labs(main="Yearly wise total injuries people Area Chart")
+
+animate(d, renderer = gifski_renderer())
+
+
+
+```
+
+The animated chart describes the yearly number of injuries in different calender year.The total injuries can be seen decreasing over the time with few fluctuations before 2010, and a rapid decrease after 2010.
+
+
+```{r}
+
+usdat <- usdat %>% 
+  mutate(EQUIP_MFR_NAME=recode(EQUIP_MFR_NAME,
+                               "Joy Machinery Co. (Joy, Joy Manufacturing Co.)"="Joy Machinery"))
+
+gdp_formatted <- usdat %>%
+  select(cal_year,EQUIP_MFR_NAME) %>%group_by(EQUIP_MFR_NAME, cal_year)%>%filter(EQUIP_MFR_NAME != "NO VALUE FOUND" & EQUIP_MFR_NAME !="Not Reported" & EQUIP_MFR_NAME !="Not listed" & EQUIP_MFR_NAME !="Not on this list")%>%summarise(ct = round(n(),2)) %>% 
+arrange(desc(ct))%>%head(30)
+
+gggdp_formatted <- transform(gdp_formatted, date=zoo::as.Date(cal_year,frac=0))
+
+gggdp_formatted <- gggdp_formatted%>% 
+  ggplot(aes(reorder(EQUIP_MFR_NAME,ct),ct,fill=EQUIP_MFR_NAME)) +geom_bar(stat = "identity")+coord_flip()+
+   ggtitle("Total Accidents by Top Mining Machine Manufacturer in every year")+
+  xlab("Mining Machine Manufacturer Name")+
+  ylab("Total Number of Accidents")+transition_reveal(date)+theme(legend.position = "none")
+
+
+animate(gggdp_formatted, renderer = gifski_renderer())
+
+
+```
+
+The animated column bar chart visualize that total accidents by top mining machine manufacturer in every year. 
+
+
+# Conclusions
+* Most of the accidents happened underground. 
+* The manufacturer responsible for significant number of accidents is Caterpillar.
+* The accidents over the time from 2000 to 2015 have reduced.
+* It doesn't matter what day of the week, the accident is spread evenly.
+* Most of the common nature of injuries were sprain, strain and ruptured disc. 
+* Handling supplies and materials have seen maximum number of injuries. 
+* 2002 fiscal year saw the most number of accidents whereas, 2015 the least
+
+# Impact of injuries on business
+* It is seen that a huge number of work days were lost due to injuries. This conditions often result in monetary loss and hamper the functioning of the business
+
+# How injuries can be prevented?
+* Using protective gears. 
+* Doing a background check/review of the manufatures to avoid any equipment failure that could cause an injury. For example: Caterpillar was responsible for highest number of injuries. 
+* Proper training by experienced professional can help reduce the risk of accidents
+
+
+
+# *******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

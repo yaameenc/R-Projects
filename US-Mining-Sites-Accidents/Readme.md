@@ -7,7 +7,7 @@ accidents in the future.
 
 Link to data analysis HTML file here: [US MINING SITES ACCIDENTS](https://rpubs.com/Yaameen/US-Accident-Data)
 
-# Key Findings
+## Key Findings
 
 * Most of the accidents happened underground
 * The manufacturer responsible for significant number of accidents is Caterpillar
@@ -17,11 +17,13 @@ Link to data analysis HTML file here: [US MINING SITES ACCIDENTS](https://rpubs.
 * Handling supplies and materials have seen maximum number of injuries. 
 * 2002 fiscal year saw the most number of accidents whereas, 2015 the least
 
-# Impact of injuries on business
+## Impact of injuries on business
+
 * It is seen that a huge number of work days were lost due to injuries. This conditions often result in monetary loss, and 
 * hamper the functioning of the business
 
-# How injuries can be prevented?
+## How injuries can be prevented?
+
 * Using protective gears. 
 * Doing a background check/review of the manufatures to avoid any equipment failure that could cause an injury. 
 For example: Caterpillar was responsible for highest number of injuries. 

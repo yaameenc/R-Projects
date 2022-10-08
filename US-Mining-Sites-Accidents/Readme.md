@@ -1,10 +1,11 @@
 
 
-US MINING SITES ACCIDENT 
+# US MINING SITES ACCIDENT 
+
 The main objective is to analyse the reasons behind so many accidents in the mining sites, what leads to such accidents, and precaution measures can be taken to avoid such
 accidents in the future.
 
-Link to HTML file here: [US MINING SITES ACCIDENTS](https://rpubs.com/Yaameen/US-Accident-Data)
+Link to data analysis HTML file here: [US MINING SITES ACCIDENTS](https://rpubs.com/Yaameen/US-Accident-Data)
 
 # Key Findings
 
